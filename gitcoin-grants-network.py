@@ -196,7 +196,7 @@ for edge in B.edges(data=True):
 # Create the edge traces
 edge_trace = go.Scatter3d(
     x=edge_x, y=edge_y, z=edge_z, 
-    line=dict(width=1, color='#b4b4b4'),
+    line=dict(width=1, color='#b4ffb4'),
     hoverinfo='none',
     mode='lines',
     marker=dict(opacity=0.2))
