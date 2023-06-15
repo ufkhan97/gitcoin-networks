@@ -142,7 +142,7 @@ dfv = dfv[dfv['amountUSD'] > min_donation]
 # count the number of rows, unique voters, and unique grant addresses
 st.write('Number of connections: ' + str(dfv.shape[0]))
 st.write('Number of unique voters: ' + str(dfv['voter'].nunique()))
-st.write('Number of unique grant titles: ' + str(dfv['title'].nunique()))
+st.write('Number of unique grants: ' + str(dfv['title'].nunique()))
 st.markdown('''**Grantees are in blue and Donors/Voters are in red**
 
 Tip: Go fullscreen with the arrows in the top-right for a better view.''')
