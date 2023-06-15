@@ -5,7 +5,6 @@ import requests
 import datetime
 import plotly.graph_objs as go
 import plotly.express as px
-import matplotlib.pyplot as plt
 import locale
 import networkx as nx
 
