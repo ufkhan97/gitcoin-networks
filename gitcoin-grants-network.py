@@ -162,7 +162,7 @@ for _, row in dfv.iterrows():
 
 # Compute the layout
 # Compute the 3D layout
-pos = nx.spring_layout(B, dim=3, k = 0.09)
+pos = nx.spring_layout(B, dim=3, k = .09)
 
 # Extract node information
 node_x = [coord[0] for coord in pos.values()]
@@ -174,10 +174,10 @@ degrees = np.array([B.degree(node_name) for node_name in node_names])
 # Apply the natural logarithm to the degrees (adding 1 first to avoid taking the logarithm of 0)
 log_degrees = np.log(degrees + 1)
 # Min-Max scaling manually
-min_size = 10  # minimum size
-max_size = 50  # maximum size
-node_sizes = ((log_degrees - np.min(log_degrees)) / (np.max(log_degrees) - np.min(log_degrees))) * (max_size - min_size) + min_size
-
+#min_size = 10  # minimum size
+#max_size = 50  # maximum size
+#node_sizes = ((log_degrees - np.min(log_degrees)) / (np.max(log_degrees) - np.min(log_degrees))) * (max_size - min_size) + min_size
+node_sizes = log_degrees * 10
 
 # Extract edge information
 edge_x = []
@@ -196,10 +196,10 @@ for edge in B.edges(data=True):
 # Create the edge traces
 edge_trace = go.Scatter3d(
     x=edge_x, y=edge_y, z=edge_z, 
-    line=dict(width=1, color='#000'),
+    line=dict(width=1, color='#b4b4b4'),
     hoverinfo='none',
     mode='lines',
-    marker=dict(opacity=0.3))
+    marker=dict(opacity=0.2))
 
 
 # Create the node traces
