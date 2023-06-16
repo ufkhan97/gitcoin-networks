@@ -189,7 +189,10 @@ for _, row in dfv.iterrows():
 
 # Compute the layout
 current_time = time.time()
-pos = nx.spring_layout(B, dim=3, k = .09, iterations=50)
+if count_connections > 5000:
+    pos = nx.spring_layout(B, dim=3, k = .09, iterations=50)
+else:
+    pos = nx.spring_layout(B, dim=3, k = .09, iterations=100)
 new_time = time.time()
 
 
