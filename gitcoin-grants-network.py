@@ -199,7 +199,7 @@ edge_trace = go.Scatter3d(
     line=dict(width=1, color='#b4ffb4'),
     hoverinfo='none',
     mode='lines',
-    marker=dict(opacity=0.8))
+    marker=dict(opacity=0.5))
 
 
 # Create the node traces
