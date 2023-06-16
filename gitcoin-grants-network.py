@@ -141,26 +141,37 @@ dfv = dfv[dfv['amountUSD'] > min_donation]
 # st.write(dfv)
 
 # count the number of rows, unique voters, and unique grant addresses
-st.write('Number of connections: ' + str(dfv.shape[0]))
-st.write('Number of unique voters: ' + str(dfv['voter'].nunique()))
-st.write('Number of unique grants: ' + str(dfv['title'].nunique()))
+
+
+# make three columns in one row for metrics
+
+count_connections = dfv.shape[0]
+count_voters = dfv['voter'].nunique()
+count_grants = dfv['title'].nunique()
+#col1, col2, col3 = st.columns(3)
+#col1 = st.metric(label="Connections", value=dfv.shape[0])
+#col2 = st.metric(label="Voters", value=dfv['voter'].nunique())
+#col3 = st.metric(label="Grants", value=dfv['title'].nunique())
+
 
 color_toggle = st.checkbox('Toggle colors', value=True)
 
 if color_toggle:
     grants_color = '#FF7043'
+    grantee_color_string = 'orange'
     voters_color = '#B3DE9F'
+    voter_color_string = 'green'
     line_color = '#6E9A82'
 else:
     grants_color = 'blue'
+    grantee_color_string = 'blue'
     voters_color = 'red'
+    voter_color_string = 'red'
     line_color = '#008F11'
 
-st.markdown('''**Grantees are in blue and donors/voters are in red**
-
-
-
-Tip: Go fullscreen with the arrows in the top-right for a better view.''')
+note_string = '**- Note: ' + str(count_grants) + ' Grantees are in ' + grantee_color_string + ' and ' + str(count_voters) + ' donors/voters are in ' + voter_color_string + ' forming ' + str(count_connections) + ' connections.**'
+st.markdown(note_string)
+st.markdown('**- Tip: Go fullscreen with the arrows in the top-right for a better view.**')
 # Initialize a new Graph
 B = nx.Graph()
 
@@ -182,6 +193,7 @@ pos = nx.spring_layout(B, dim=3, k = .09, iterations=50)
 new_time = time.time()
 
 
+    
 # Extract node information
 node_x = [coord[0] for coord in pos.values()]
 node_y = [coord[1] for coord in pos.values()]
@@ -263,4 +275,4 @@ fig = go.Figure(data=[edge_trace, node_trace],
                         zaxis_title='Z Axis')))
                         
 st.plotly_chart(fig, use_container_width=True)
-st.write('Time to compute layout: ' + str(round(new_time - current_time, 2)) + ' seconds')
+st.caption('Time to compute layout: ' + str(round(new_time - current_time, 2)) + ' seconds')
