@@ -199,7 +199,7 @@ edge_trace = go.Scatter3d(
     line=dict(width=1, color='#b4ffb4'),
     hoverinfo='none',
     mode='lines',
-    marker=dict(opacity=0.2))
+    marker=dict(opacity=0.8))
 
 
 # Create the node traces
@@ -211,7 +211,7 @@ node_trace = go.Scatter3d(
         color=[data['color'] for _, data in B.nodes(data=True)],  # color is now assigned based on node data
         #colorscale='Picnic',
         size=node_sizes,
-        opacity=0.8,
+        opacity=1,
         sizemode='diameter'
     ))
 
