@@ -215,7 +215,7 @@ node_trace = go.Scatter3d(
         sizemode='diameter'
     ))
 
-# Color nodes by their number of connections
+
 node_adjacencies = []
 for node, adjacencies in enumerate(B.adjacency()):
     node_adjacencies.append(len(adjacencies[1]))
