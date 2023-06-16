@@ -7,6 +7,7 @@ import plotly.graph_objs as go
 import plotly.express as px
 import locale
 import networkx as nx
+import time
 
 
 st.set_page_config(
@@ -143,15 +144,29 @@ dfv = dfv[dfv['amountUSD'] > min_donation]
 st.write('Number of connections: ' + str(dfv.shape[0]))
 st.write('Number of unique voters: ' + str(dfv['voter'].nunique()))
 st.write('Number of unique grants: ' + str(dfv['title'].nunique()))
+
+color_toggle = st.checkbox('Toggle colors', value=True)
+
+if color_toggle:
+    grants_color = '#FF7043'
+    voters_color = '#B3DE9F'
+    line_color = '#6E9A82'
+else:
+    grants_color = 'blue'
+    voters_color = 'red'
+    line_color = '#008F11'
+
 st.markdown('''**Grantees are in blue and donors/voters are in red**
+
+
 
 Tip: Go fullscreen with the arrows in the top-right for a better view.''')
 # Initialize a new Graph
 B = nx.Graph()
 
 # Create nodes with the bipartite attribute
-B.add_nodes_from(dfv['voter'].unique(), bipartite=0, color='red') 
-B.add_nodes_from(dfv['title'].unique(), bipartite=1, color='blue') 
+B.add_nodes_from(dfv['voter'].unique(), bipartite=0, color=voters_color) 
+B.add_nodes_from(dfv['title'].unique(), bipartite=1, color=grants_color) 
 
 
 
@@ -162,7 +177,10 @@ for _, row in dfv.iterrows():
 
 
 # Compute the layout
-pos = nx.spring_layout(B, dim=3, k = .09)
+current_time = time.time()
+pos = nx.spring_layout(B, dim=3, k = .09, iterations=50)
+new_time = time.time()
+
 
 # Extract node information
 node_x = [coord[0] for coord in pos.values()]
@@ -196,7 +214,7 @@ for edge in B.edges(data=True):
 # Create the edge traces
 edge_trace = go.Scatter3d(
     x=edge_x, y=edge_y, z=edge_z, 
-    line=dict(width=1, color='#008F11'),
+    line=dict(width=1, color=line_color),
     hoverinfo='none',
     mode='lines',
     marker=dict(opacity=0.5))
@@ -245,3 +263,4 @@ fig = go.Figure(data=[edge_trace, node_trace],
                         zaxis_title='Z Axis')))
                         
 st.plotly_chart(fig, use_container_width=True)
+st.write('Time to compute layout: ' + str(round(new_time - current_time, 2)) + ' seconds')
