@@ -143,7 +143,7 @@ dfv = dfv[dfv['amountUSD'] > min_donation]
 st.write('Number of connections: ' + str(dfv.shape[0]))
 st.write('Number of unique voters: ' + str(dfv['voter'].nunique()))
 st.write('Number of unique grants: ' + str(dfv['title'].nunique()))
-st.markdown('''**Grantees are in blue and Donors/Voters are in red**
+st.markdown('''**Grantees are in blue and donors/voters are in red**
 
 Tip: Go fullscreen with the arrows in the top-right for a better view.''')
 # Initialize a new Graph
@@ -160,8 +160,8 @@ for _, row in dfv.iterrows():
     B.add_edge(row['voter'], row['title'], amountUSD=row['amountUSD'])
 
 
+
 # Compute the layout
-# Compute the 3D layout
 pos = nx.spring_layout(B, dim=3, k = .09)
 
 # Extract node information
@@ -171,7 +171,7 @@ node_z = [coord[2] for coord in pos.values()] # added z-coordinates for 3D
 node_names = list(pos.keys())
 # Compute the degrees of the nodes 
 degrees = np.array([B.degree(node_name) for node_name in node_names])
-# Apply the natural logarithm to the degrees (adding 1 first to avoid taking the logarithm of 0)
+# Apply the natural logarithm to the degrees 
 log_degrees = np.log(degrees + 1)
 # Min-Max scaling manually
 #min_size = 10  # minimum size
@@ -182,7 +182,7 @@ node_sizes = log_degrees * 10
 # Extract edge information
 edge_x = []
 edge_y = []
-edge_z = []  # added z-coordinates for 3D
+edge_z = []  
 edge_weights = []
 
 for edge in B.edges(data=True):
@@ -190,7 +190,7 @@ for edge in B.edges(data=True):
     x1, y1, z1 = pos[edge[1]]
     edge_x.extend([x0, x1, None])
     edge_y.extend([y0, y1, None])
-    edge_z.extend([z0, z1, None])  # added z-coordinates for 3D
+    edge_z.extend([z0, z1, None])  
     edge_weights.append(edge[2]['amountUSD'])
 
 # Create the edge traces
@@ -209,7 +209,6 @@ node_trace = go.Scatter3d(
     hoverinfo='text',
     marker=dict(
         color=[data['color'] for _, data in B.nodes(data=True)],  # color is now assigned based on node data
-        #colorscale='Picnic',
         size=node_sizes,
         opacity=1,
         sizemode='diameter'
@@ -245,6 +244,4 @@ fig = go.Figure(data=[edge_trace, node_trace],
                         yaxis_title='Y Axis',
                         zaxis_title='Z Axis')))
                         
-
-# Display the 3D graph in the Streamlit app
 st.plotly_chart(fig, use_container_width=True)
