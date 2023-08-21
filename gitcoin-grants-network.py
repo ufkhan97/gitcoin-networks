@@ -9,149 +9,169 @@ import locale
 import networkx as nx
 import time
 
+BASE_URL = "https://indexer-grants-stack.gitcoin.co/data"
+time_to_live = 900  # 15 minutes
 
 st.set_page_config(
-    page_title="Gitcoin Beta Rounds",
+    page_title="Gitcoin Grants Networks",
     page_icon="📊",
     layout="wide",
-
 )
 
-st.title('Gitcoin Beta Rounds')
+st.title('Gitcoin Grants')
 st.write('The Gitcoin Grants Program is a quarterly initiative that empowers everyday believers to drive funding toward what they believe matters, with the impact of individual donations being magnified by the use of the [Quadratic Funding (QF)](https://wtfisqf.com) distribution mechanism.')
-st.write('')
 st.write('This network graph is still in development. It helps visualize the connections between donors and projects in the Gitcoin Grants Beta Rounds. The graph is interactive, so you can hover over a node to see who it is, zoom in and out and drag the graph around to explore it.')
 st.write('One use for this graph is to identify interesting outliers such as grants who have their own distinct donor base.')
 
+def safe_get(data, *keys):
+    """Safely retrieve nested dictionary keys."""
+    temp = data
+    for key in keys:
+        if isinstance(temp, dict) and key in temp:
+            temp = temp[key]
+        else:
+            return None
+    return temp
 
-chain_id = '1'
-
-
-@st.cache_data(ttl=3000)
-def load_chain_data(chain_id):
-    chain_url = 'https://indexer-grants-stack.gitcoin.co/data/' + chain_id + '/rounds.json'
+def load_data_from_url(url):
     try:
-        response = requests.get(chain_url)
-        if response.status_code == 200:
-            chain_data = response.json()
-            rounds = []
-            for round in chain_data:
-                if round['metadata'] is not None:
-                    round_data = {
-                        'round_id': round['id'],
-                        'name': round['metadata']['name'],
-                        'amountUSD': round['amountUSD'],
-                        'votes': round['votes'],
-                        'description': round['metadata']['description'] if 'description' in round['metadata'] else '',
-                        'matchingFundsAvailable': round['metadata']['matchingFunds']['matchingFundsAvailable'] if 'matchingFunds' in round['metadata'] else '',
-                        'matchingCap': round['metadata']['matchingFunds']['matchingCap'] if 'matchingFunds' in round['metadata'] else '',
-                        'roundStartTime': datetime.datetime.utcfromtimestamp(int(round['roundStartTime'])), # create a datetime object from the timestamp in UTC time
-                        'roundEndTime': datetime.datetime.utcfromtimestamp(int(round['roundEndTime']))
-                    }
-                    rounds.append(round_data)
-            df = pd.DataFrame(rounds)
-            # Filter to beta rounds
-            start_time = datetime.datetime(2023, 4, 26, 15, 0, 0)
-            end_time = datetime.datetime(2023, 5, 9, 23, 59, 0)
-            # filter to only include rounds with votes > 0 and roundStartTime <= start_time and roundEndTime == end_time
-            df = df[(df['votes'] > 0) & (df['roundStartTime'] <= start_time) & (df['roundEndTime'] == end_time)]
-            return df 
-    except: 
-        return pd.DataFrame()
+        response = requests.get(url)
+        response.raise_for_status()  # Raise an error for bad responses
+        return response.json()
+    except requests.RequestException as e:
+        st.warning(f"Failed to fetch data from {url}. Error: {e}")
+        return []
 
-@st.cache_data(ttl=3000)
-def load_round_projects_data(round_id):
-    # prepare the URLs
-    projects_url = 'https://indexer-grants-stack.gitcoin.co/data/1/rounds/' + round_id + '/projects.json'
-    
-    try:
-        # download the Projects JSON data from the URL
-        response = requests.get(projects_url)
-        if response.status_code == 200:
-            projects_data = response.json()
+@st.cache_data(ttl=time_to_live)
+def load_data(chain_id, round_id, data_type):
+    url = f"{BASE_URL}/{chain_id}/rounds/{round_id}/{data_type}.json"
+    return load_data_from_url(url)
 
-        # Extract the relevant data from each project
-        projects = []
-        for project in projects_data:
+def transform_projects_data(data):
+    projects = []
+    for project in data:
+        title = safe_get(project, 'metadata', 'application', 'project', 'title')
+        grantAddress = safe_get(project, 'metadata', 'application', 'recipient')
+        description = safe_get(project, 'metadata', 'application', 'project', 'description')
+        
+        if title and grantAddress:  # Ensure required fields are available
             project_data = {
-                'id': project['id'],
-                'title': project['metadata']['application']['project']['title'],
-                'description': project['metadata']['application']['project']['description'],
+                'projectId': project['projectId'],
+                'title': title,
+                'grantAddress': grantAddress,
                 'status': project['status'],
                 'amountUSD': project['amountUSD'],
                 'votes': project['votes'],
-                'uniqueContributors': project['uniqueContributors']
+                'uniqueContributors': project['uniqueContributors'],
+                'description': description
             }
             projects.append(project_data)
-        # Create a DataFrame from the extracted data
-        dfp = pd.DataFrame(projects)
-        # Reorder the columns to match the desired order and rename column id to project_id
-        dfp = dfp[['id', 'title', 'description', 'status', 'amountUSD', 'votes', 'uniqueContributors']]
-        dfp = dfp.rename(columns={'id': 'project_id'})
-        # Filter to only approved projects
-        dfp = dfp[dfp['status'] == 'APPROVED']
-        return dfp
-    except:
-        return pd.DataFrame()
+    return projects
+
+@st.cache_data(ttl=time_to_live)
+def load_passport_data():
+    url = f"{BASE_URL}/passport_scores.json"
+    data = load_data_from_url(url)
     
-@st.cache_data(ttl=3000)
-def load_round_votes_data(round_id):
-    votes_url = 'https://indexer-grants-stack.gitcoin.co/data/1/rounds/' + round_id + '/votes.json'
-    try:
-        # download the Votes JSON data from the URL
-        response = requests.get(votes_url)
-        if response.status_code == 200:
-            votes_data = response.json()
-        df = pd.DataFrame(votes_data)
-        return df
-    except:
-        return pd.DataFrame()
+    passports = []
+    for passport in data:
+        address = passport.get('address')
+        last_score_timestamp = passport.get('last_score_timestamp')
+        status = passport.get('status')
+        rawScore = safe_get(passport, 'evidence', 'rawScore') or 0
 
+        if address:  # Ensure the required field is available
+            passport_data = {
+                'address': address,
+                'last_score_timestamp': last_score_timestamp,
+                'status': status,
+                'rawScore': rawScore
+            }
+            passports.append(passport_data)
 
+    df = pd.DataFrame(passports)
+    df['last_score_timestamp'] = pd.to_datetime(df['last_score_timestamp'])
+    return df
+
+def compute_timestamp(row, starting_time, chain_starting_blocks):
+    # Get the starting block for the chain_id
+    starting_block = chain_starting_blocks[row['chain_id']]
+    # Calculate the timestamp based on the blockNumber and starting block
+    timestamp = starting_time + pd.to_timedelta((row['blockNumber'] - starting_block) * 2, unit='s')
+    return timestamp
+
+# Usage
 data_load_state = st.text('Loading data...')
-chain_data = load_chain_data(chain_id)
+round_data = pd.read_csv('gg18_rounds.csv')
+
+dfv_list = []
+dfp_list = []
+for _, row in round_data.iterrows():
+    raw_projects_data = load_data(str(row['chain_id']), str(row['round_id']), "applications")
+    projects_list = transform_projects_data(raw_projects_data)
+    dfp = pd.DataFrame(projects_list)
+    dfv = pd.DataFrame(load_data(str(row['chain_id']), str(row['round_id']), "votes"))
+
+    dfp['round_id'] = row['round_id']
+    dfp['chain_id'] = row['chain_id']
+    dfp['round_name'] = row['round_name']
+    
+    dfv['round_id'] = row['round_id']
+    dfv['chain_id'] = row['chain_id']
+    dfv['round_name'] = row['round_name']
+
+    dfv_list.append(dfv)
+    dfp_list.append(dfp)
+
+dfv = pd.concat(dfv_list)
+dfp = pd.concat(dfp_list)
+
+token_map = {
+    "0x0000000000000000000000000000000000000000": "ETH",
+    "0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1": "DAI",
+}
+dfv["token_symbol"] = dfv["token"].map(token_map)
+
+chain_starting_blocks = dfv.groupby('chain_id')['blockNumber'].min().to_dict()
+starting_time = pd.to_datetime('2023/08/15 12:00 PM UTC')
+dfv['timestamp'] = dfv.apply(compute_timestamp, args=(starting_time, chain_starting_blocks), axis=1)
+
+dfpp = load_passport_data()
+
+
+
 data_load_state.text("")
 
 # selectbox to select the round
 option = st.selectbox(
     'Select Round',
-    chain_data['name'], index=3)
+    dfv['round_name'].unique(), index=3)
 
-
-
-data_load_state = st.text('Loading data...')
-# load round data for the option selected by looking up the round id with that name in the chain_data df
-round_id = chain_data[chain_data['name'] == option]['round_id'].values[0]
-dfp = load_round_projects_data(round_id)
-dfv = load_round_votes_data(round_id)
-data_load_state.text("")
-
-dfv = pd.merge(dfv, dfp[['project_id', 'title', 'status']], how='left', left_on='projectId', right_on='project_id')
-
-
+dfv = dfv[dfv['round_name'] == option]
+dfp = dfp[dfp['round_name'] == option]
+round_data = round_data[round_data['round_name'] == option]
+dfv = pd.merge(dfv, dfp[['projectId', 'title']], how='left', left_on='projectId', right_on='projectId')
+dfv = pd.merge(dfv, dfpp[['address', 'rawScore']], how='left', left_on='voter', right_on='address')
+dfv['rawScore'] = dfv['rawScore'].fillna(0)
 
 # sum amountUSD group by voter and grantAddress
-dfv = dfv.groupby(['voter', 'grantAddress', 'title', 'status']).agg({'amountUSD': 'sum'}).reset_index()
+dfv = dfv.groupby(['voter', 'grantAddress', 'title']).agg({'amountUSD': 'sum', 'timestamp': 'min', 'rawScore':'max'}).reset_index()
 
 # Minimum donation amount to include, start at 10
-min_donation = st.slider('Minimum donation amount', value=10, max_value=1000, min_value=1, step=1)
+min_donation = st.slider('Minimum donation amount', value=10, max_value=50, min_value=1, step=1)
+# Minimum passport score to include, start at 20
+min_passport_score = st.slider('Minimum Passport Score', value=20, max_value=100, min_value=1, step=1)
 
 # Filter the dataframe to include only rows with donation amounts above the threshold
 dfv = dfv[dfv['amountUSD'] > min_donation]
-# st.write(dfv)
+# Filter the dataframe to include only rows with donation amounts above the threshold
+df = dfv[dfv['rawScore'] > min_passport_score]
 
-# count the number of rows, unique voters, and unique grant addresses
-
-
-# make three columns in one row for metrics
 
 count_connections = dfv.shape[0]
 count_voters = dfv['voter'].nunique()
 count_grants = dfv['title'].nunique()
-#col1, col2, col3 = st.columns(3)
-#col1 = st.metric(label="Connections", value=dfv.shape[0])
-#col2 = st.metric(label="Voters", value=dfv['voter'].nunique())
-#col3 = st.metric(label="Grants", value=dfv['title'].nunique())
+
 
 
 color_toggle = st.checkbox('Toggle colors', value=True)
