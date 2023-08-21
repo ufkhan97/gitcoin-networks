@@ -90,7 +90,7 @@ def load_passport_data():
             passports.append(passport_data)
 
     df = pd.DataFrame(passports)
-    df['last_score_timestamp'] = pd.to_datetime(df['last_score_timestamp'])
+    #df['last_score_timestamp'] = pd.to_datetime(df['last_score_timestamp'])
     return df
 
 def compute_timestamp(row, starting_time, chain_starting_blocks):
