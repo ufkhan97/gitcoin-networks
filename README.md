@@ -1,2 +1,2 @@
-# beta-networks
+# gitcoin-networks
  
