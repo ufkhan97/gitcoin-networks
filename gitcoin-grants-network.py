@@ -90,6 +90,7 @@ def load_passport_data():
             passports.append(passport_data)
 
     df = pd.DataFrame(passports)
+    df['rawScore'] = df['rawScore'].astype(float)
     #df['last_score_timestamp'] = pd.to_datetime(df['last_score_timestamp'])
     return df
 
@@ -156,6 +157,7 @@ dfv['rawScore'] = dfv['rawScore'].fillna(0)
 
 # sum amountUSD group by voter and grantAddress
 dfv = dfv.groupby(['voter', 'grantAddress', 'title']).agg({'amountUSD': 'sum', 'timestamp': 'min', 'rawScore':'max'}).reset_index()
+
 
 # Minimum donation amount to include, start at 10
 min_donation = st.slider('Minimum donation amount', value=10, max_value=50, min_value=1, step=1)
